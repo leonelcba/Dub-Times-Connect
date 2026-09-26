@@ -1,14 +1,22 @@
-# Dub Times Connect Android — prototipo 0.2
+# Dub Times Connect Android — v0.4
 
-Versión visual refinada para probar el flujo móvil de Dub Times Connect.
+Primera versión con lectura real desde Discord y caché SQLite local.
 
-## Cambios 0.2
-- Barra superior corregida: ya no invade la barra de estado.
-- Navegación inferior Proyectos / Clases / Sesión.
-- Tarjetas, chips de estado, tipografía y espaciado refinados.
-- Botones más compactos y jerarquía visual más cercana al mockup.
-- Selector de proyecto integrado visualmente.
-- Mantiene datos locales de demostración; Discord real se conectará en una etapa posterior.
+## Cambios
+- Corrige texto escrito en diálogos claros: ahora usa texto oscuro y placeholder gris.
+- `Sincronizar Discord` descarga los posts activos y archivados del foro configurado.
+- Importa proyectos, versiones, personajes, estudiantes, estados, sugerencias y entradas.
+- Reconoce colectivos (Walla/Wallas/Todos/Todas/Gente y repartos separados por comas).
+- SQLite queda como caché local para abrir los datos aunque no se sincronice en ese momento.
+- La sincronización de esta versión es **Discord → Android (lectura)**. No modifica Discord.
+
+## Configuración inicial
+Al pulsar `Sincronizar Discord` por primera vez, la app pide:
+1. Token del bot.
+2. ID del servidor (guild).
+3. ID del foro de proyectos que usa Dub Times Connect de Windows.
+
+Para esta prueba privada el token se guarda localmente en el teléfono. No distribuyas una APK con un token incorporado ni compartas el token.
 
 ## Compilar
-El workflow `.github/workflows/build-apk.yml` compila automáticamente el APK debug con GitHub Actions.
+El workflow `.github/workflows/build-apk.yml` compila el APK debug en GitHub Actions.
