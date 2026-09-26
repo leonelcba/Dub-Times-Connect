@@ -15,7 +15,7 @@ public class DiscordSync {
     String get(String path) throws Exception{
         HttpURLConnection c=(HttpURLConnection)new URL(API+path).openConnection();
         c.setRequestMethod("GET");c.setConnectTimeout(15000);c.setReadTimeout(20000);
-        c.setRequestProperty("Authorization","Bot "+token);c.setRequestProperty("User-Agent","DubTimesConnectAndroid/0.4");
+        c.setRequestProperty("Authorization","Bot "+token);c.setRequestProperty("User-Agent","DubTimesConnectAndroid/0.6");
         int code=c.getResponseCode();InputStream in=code>=200&&code<300?c.getInputStream():c.getErrorStream();
         String text=read(in);if(code<200||code>=300)throw new IOException("Discord HTTP "+code+(text.isEmpty()?"":" · "+text));return text;
     }
@@ -55,8 +55,24 @@ public class DiscordSync {
         for(int mi=msgs.length()-1;mi>=0;mi--){String content=msgs.getJSONObject(mi).optString("content","");for(String raw:content.split("\\r?\\n")){
             String line=raw.trim();if(line.isEmpty())continue;String plain=line.replace("**","").trim();Matcher vm=VERSION.matcher(plain);if(vm.matches()){String s=vm.group(1).trim().replaceFirst("^[^\\p{L}\\p{N}]+","");if(s.isEmpty())s="1";version=("VERSION "+s).toUpperCase(Locale.ROOT);continue;}
             Matcher m=CHAR.matcher(plain);if(!m.matches())continue;CharacterData c=new CharacterData();c.version=version;c.state=stateName(m.group(1));c.name=m.group(2).trim();c.suggestion=m.group(3)==null?"":m.group(3).trim();String actor=m.group(4)==null?"":m.group(4).trim();c.entries=m.group(5)==null?0:Integer.parseInt(m.group(5));
-            c.collective=isCollective(c.name,actor);if(!actor.equalsIgnoreCase("Sin asignar")){if(c.collective){for(String part:actor.split(",")){String q=part.trim().replaceFirst("^(🟢|🟡|🔵|⚪|⛔)\\s*","").trim();if(!q.isEmpty()&&!q.equalsIgnoreCase("Sin alumnos"))c.students.add(q);}}else{for(String part:actor.split("/")){String q=part.trim();if(!q.isEmpty())c.students.add(q);}}}p.characters.add(c);
+            // Los posts de Discord también contienen filas-resumen como
+            // "🔵 Correcciones: 0". No son personajes ni estudiantes.
+            if(isSummaryRow(c.name,actor))continue;
+            c.collective=isCollective(c.name,actor);if(!actor.equalsIgnoreCase("Sin asignar")){if(c.collective){for(String part:actor.split(",")){String q=cleanStudent(part);if(validStudent(q))c.students.add(q);}}else{for(String part:actor.split("/")){String q=cleanStudent(part);if(validStudent(q))c.students.add(q);}}}p.characters.add(c);
         }}return p;
+    }
+
+    static String cleanStudent(String raw){return raw.trim().replaceFirst("^(🟢|🟡|🔵|⚪|⛔)\\s*","").trim();}
+    static boolean validStudent(String q){
+        if(q==null||q.isEmpty()||q.equalsIgnoreCase("Sin alumnos")||q.equalsIgnoreCase("Sin asignar"))return false;
+        if(q.matches("^[+-]?\\d+(?:[.,]\\d+)?$"))return false;
+        String n=q.toLowerCase(Locale.ROOT);
+        return !(n.equals("pendiente")||n.equals("pendientes")||n.equals("terminado")||n.equals("terminados")||n.equals("correcciones")||n.equals("en proceso"));
+    }
+    static boolean isSummaryRow(String name,String actor){
+        String n=name.trim().toLowerCase(Locale.ROOT);
+        boolean summary=n.equals("pendiente")||n.equals("pendientes")||n.equals("terminado")||n.equals("terminados")||n.equals("correcciones")||n.equals("sin asignar")||n.equals("en proceso");
+        return summary && (actor.trim().matches("^[+-]?\\d+(?:\\s*\\+\\d+)?$")||actor.trim().isEmpty());
     }
     static boolean isCollective(String name,String actor){String n=name.trim().toLowerCase(Locale.ROOT);return n.equals("walla")||n.equals("wallas")||n.equals("todos")||n.equals("todas")||n.equals("gente")||actor.contains(",");}
     static String stateName(String e){if("🟢".equals(e))return "Terminado";if("🟡".equals(e))return "En proceso";if("🔵".equals(e))return "Correcciones";if("⛔".equals(e))return "Sin asignar";return "Pendiente";}

@@ -1,10 +1,10 @@
 package com.dubtimes.connect;
 
-import android.app.*;import android.os.*;import android.graphics.*;import android.graphics.drawable.GradientDrawable;import android.content.*;import android.view.*;import android.view.inputmethod.InputMethodManager;import android.widget.*;import java.util.*;
+import android.app.*;import android.os.*;import android.graphics.*;import android.graphics.drawable.GradientDrawable;import android.content.*;import android.net.Uri;import android.view.*;import android.view.inputmethod.InputMethodManager;import android.widget.*;import java.util.*;import java.io.*;import org.json.JSONObject;
 
 public class MainActivity extends Activity {
  final int BG=Color.rgb(8,14,24),SURFACE=Color.rgb(14,24,39),CARD=Color.rgb(18,31,49),TEXT=Color.rgb(241,245,249),MUTED=Color.rgb(148,163,184),BORDER=Color.rgb(42,57,78),ACCENT=Color.rgb(112,91,255),GREEN=Color.rgb(72,199,116),YELLOW=Color.rgb(245,183,62),BLUE=Color.rgb(75,148,255),RED=Color.rgb(244,90,90);
- LinearLayout body,bottomNav; int currentTab=0; AppDb db; long projectId=-1,studentId=-1; String project="Sin proyecto",student="Sin estudiante";
+ LinearLayout body,bottomNav; int currentTab=0; AppDb db; static final int REQ_IMPORT_DISCORD=6101,REQ_EXPORT_DISCORD=6102; boolean importSyncAfter=false; long projectId=-1,studentId=-1; String project="Sin proyecto",student="Sin estudiante";
  int dp(int n){return(int)(n*getResources().getDisplayMetrics().density+.5f);} @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(SURFACE);getWindow().setNavigationBarColor(BG);db=new AppDb(this);restoreSelection();showProjects();}
  void restoreSelection(){List<AppDb.Row> ps=db.projects();if(!ps.isEmpty()){projectId=ps.get(0).l("id");project=ps.get(0).s("name");List<AppDb.Row> ss=db.studentsForProject(projectId);if(!ss.isEmpty()){studentId=ss.get(0).l("id");student=ss.get(0).s("name");}}}
  GradientDrawable shape(int c,float r){GradientDrawable d=new GradientDrawable();d.setColor(c);d.setCornerRadius(dp((int)r));return d;} GradientDrawable outlined(int c,float r,int st){GradientDrawable d=shape(c,r);d.setStroke(dp(1),st);return d;}
@@ -41,9 +41,21 @@ public class MainActivity extends Activity {
  }
  void discordSettings(boolean syncAfter){
   android.content.SharedPreferences sp=getSharedPreferences("discord",MODE_PRIVATE);LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(22),0,dp(22),0);
-  EditText token=input("Token del bot");token.setText(sp.getString("token",""));token.setInputType(129);box.addView(token);EditText guild=input("ID del servidor");guild.setText(sp.getString("guild",""));guild.setInputType(2);box.addView(guild);EditText forum=input("ID del foro de proyectos");forum.setText(sp.getString("forum",""));forum.setInputType(2);box.addView(forum);TextView note=tv("Solo para esta prueba privada: el token queda guardado en este teléfono. No compartas esta APK ni el token.",12,false,Color.rgb(80,90,105));note.setPadding(0,dp(10),0,0);box.addView(note);
+  EditText token=input("Token del bot");token.setText(sp.getString("token",""));token.setInputType(129);box.addView(token);EditText guild=input("ID del servidor");guild.setText(sp.getString("guild",""));guild.setInputType(2);box.addView(guild);EditText forum=input("ID del foro de proyectos");forum.setText(sp.getString("forum",""));forum.setInputType(2);box.addView(forum);
+  Button imp=secondary("↓  Importar configuración");imp.setOnClickListener(v->{importSyncAfter=syncAfter;Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/json");startActivityForResult(i,REQ_IMPORT_DISCORD);});box.addView(imp);
+  Button exp=secondary("↑  Exportar configuración");exp.setOnClickListener(v->{String t=token.getText().toString().trim(),g=guild.getText().toString().trim(),f=forum.getText().toString().trim();if(t.isEmpty()||g.isEmpty()||f.isEmpty()){toast("Primero completá y guardá la configuración.");return;}sp.edit().putString("token",t).putString("guild",g).putString("forum",f).apply();Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("application/json");i.putExtra(Intent.EXTRA_TITLE,"dubtimes-discord.json");startActivityForResult(i,REQ_EXPORT_DISCORD);});box.addView(exp);
+  TextView note=tv("Podés importar/exportar dubtimes-discord.json para no volver a escribir estos datos. El archivo contiene el token del bot: guardalo como una contraseña.",12,false,Color.rgb(80,90,105));note.setPadding(0,dp(10),0,0);box.addView(note);
   AlertDialog d=new AlertDialog.Builder(this).setTitle("Conexión con Discord").setView(box).setNegativeButton("Cancelar",null).setPositiveButton("Guardar",null).create();d.setOnShowListener(x->d.getButton(-1).setOnClickListener(v->{String t=token.getText().toString().trim(),g=guild.getText().toString().trim(),f=forum.getText().toString().trim();if(t.isEmpty()||g.isEmpty()||f.isEmpty()){toast("Completá token, servidor y foro.");return;}sp.edit().putString("token",t).putString("guild",g).putString("forum",f).apply();d.dismiss();if(syncAfter)syncDiscord();}));d.show();
  }
+
+ @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+  super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;Uri uri=data.getData();
+  try{
+   if(requestCode==REQ_IMPORT_DISCORD){String raw=readUri(uri);JSONObject j=new JSONObject(raw);String t=j.optString("token","").trim(),g=j.optString("server_id",j.optString("guild_id","")).trim(),f=j.optString("projects_forum_id",j.optString("forum_id","")).trim();if(t.isEmpty()||g.isEmpty()||f.isEmpty())throw new Exception("El archivo no contiene token, server_id y projects_forum_id.");getSharedPreferences("discord",MODE_PRIVATE).edit().putString("token",t).putString("guild",g).putString("forum",f).apply();toast("Configuración de Discord importada.");if(importSyncAfter){importSyncAfter=false;syncDiscord();}}
+   else if(requestCode==REQ_EXPORT_DISCORD){android.content.SharedPreferences sp=getSharedPreferences("discord",MODE_PRIVATE);JSONObject j=new JSONObject();j.put("token",sp.getString("token",""));j.put("server_id",sp.getString("guild",""));j.put("projects_forum_id",sp.getString("forum",""));try(OutputStream out=getContentResolver().openOutputStream(uri,"wt")){out.write(j.toString(2).getBytes("UTF-8"));}toast("Configuración exportada.");}
+  }catch(Exception e){new AlertDialog.Builder(this).setTitle("Configuración de Discord").setMessage("No se pudo procesar el archivo.\n\n"+e.getMessage()).setPositiveButton("Cerrar",null).show();}
+ }
+ String readUri(Uri uri)throws Exception{try(InputStream in=getContentResolver().openInputStream(uri);ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] b=new byte[4096];int n;while((n=in.read(b))>0)out.write(b,0,n);return out.toString("UTF-8");}}
 
  void toast(String s){Toast.makeText(this,s,Toast.LENGTH_LONG).show();}
 }

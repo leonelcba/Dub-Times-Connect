@@ -1,4 +1,4 @@
-# Dub Times Connect Android — v0.5
+# Dub Times Connect Android — v0.6
 
 Primera versión con lectura real desde Discord y caché SQLite local.
 
@@ -20,3 +20,11 @@ Para esta prueba privada el token se guarda localmente en el teléfono. No distr
 
 ## Compilar
 El workflow `.github/workflows/build-apk.yml` compila el APK debug en GitHub Actions.
+
+
+## v0.6
+- Corrige filas-resumen de Discord interpretadas como estudiantes numéricos.
+- La siguiente sincronización limpia de la caché estudiantes huérfanos falsos.
+- Importa configuración desde `dubtimes-discord.json`.
+- Exporta la configuración actual al mismo formato para reutilizarla tras una instalación.
+- El archivo contiene el token del bot y debe tratarse como una contraseña.
