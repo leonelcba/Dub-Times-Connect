@@ -1,4 +1,4 @@
-# Dub Times Connect Android — v0.4
+# Dub Times Connect Android — v0.5
 
 Primera versión con lectura real desde Discord y caché SQLite local.
 
