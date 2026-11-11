@@ -1,0 +1,45 @@
+name: APK Android 1.0.1 firmado
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - android-1.0.1-alumnos-hoy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Verificar fuentes de la versión correcta
+        run: |
+          grep -q "com.dubtimes.connectviewer" app/build.gradle
+          grep -q "versionCode 1001" app/build.gradle
+          test -f app/src/main/java/com/dubtimes/connectviewer/MainActivity.java
+      - name: Preparar firma privada
+        env:
+          KEYSTORE_B64: ${{ secrets.DUBTIMES_ANDROID_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::Falta DUBTIMES_ANDROID_KEYSTORE_B64. No se generará un APK con una firma diferente."
+            exit 1
+          fi
+          mkdir -p Firma
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > Firma/connect-key.jks
+      - name: Compilar APK release
+        run: gradle :app:assembleRelease
+      - name: Publicar APK instalable
+        uses: actions/upload-artifact@v4
+        with:
+          name: DubTimesConnect-Android-1.0.1-Release
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
