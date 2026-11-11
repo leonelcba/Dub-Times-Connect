@@ -1,30 +1,14 @@
-# Dub Times Connect Android — v0.6
+# Dub Times Connect Android 1.0.1
 
-Primera versión con lectura real desde Discord y caché SQLite local.
+Código Android actualizado. Esta versión reemplaza el antiguo prototipo de septiembre de 2026.
 
-## Cambios
-- Corrige texto escrito en diálogos claros: ahora usa texto oscuro y placeholder gris.
-- `Sincronizar Discord` descarga los posts activos y archivados del foro configurado.
-- Importa proyectos, versiones, personajes, estudiantes, estados, sugerencias y entradas.
-- Reconoce colectivos (Walla/Wallas/Todos/Todas/Gente y repartos separados por comas).
-- SQLite queda como caché local para abrir los datos aunque no se sincronice en ese momento.
-- La sincronización de esta versión es **Discord → Android (lectura)**. No modifica Discord.
+- ID de paquete: `com.dubtimes.connectviewer`
+- Versión: 1.0.1 (`versionCode 1001`)
+- Funciones: Proyectos, Alumnos · Hoy, Clases, Tareas, edición y sincronización de Supabase ya configurada en la aplicación.
+- La vinculación se conserva al instalar una actualización firmada con el mismo certificado.
 
-## Configuración inicial
-Al pulsar `Sincronizar Discord` por primera vez, la app pide:
-1. Token del bot.
-2. ID del servidor (guild).
-3. ID del foro de proyectos que usa Dub Times Connect de Windows.
+## APK
+La pestaña **Actions** compila automáticamente un APK de pruebas. Para publicar un APK instalable encima de la aplicación existente, configurar estos secretos de repositorio con el certificado **original**, sin subirlo públicamente:
+`DUBTIMES_ANDROID_KEYSTORE_B64`, `DUBTIMES_KEYSTORE_PASSWORD`, `DUBTIMES_KEY_ALIAS`, `DUBTIMES_KEY_PASSWORD`.
 
-Para esta prueba privada el token se guarda localmente en el teléfono. No distribuyas una APK con un token incorporado ni compartas el token.
-
-## Compilar
-El workflow `.github/workflows/build-apk.yml` compila el APK debug en GitHub Actions.
-
-
-## v0.6
-- Corrige filas-resumen de Discord interpretadas como estudiantes numéricos.
-- La siguiente sincronización limpia de la caché estudiantes huérfanos falsos.
-- Importa configuración desde `dubtimes-discord.json`.
-- Exporta la configuración actual al mismo formato para reutilizarla tras una instalación.
-- El archivo contiene el token del bot y debe tratarse como una contraseña.
+Sin estos secretos únicamente se entrega APK debug, que podría requerir instalación separada, no sobre la anterior.

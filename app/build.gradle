@@ -1,17 +1,20 @@
-plugins {
-    id 'com.android.application'
-}
-
+plugins { id 'com.android.application' }
 android {
-    namespace 'com.dubtimes.connect'
-    compileSdk 35
-
-    defaultConfig {
-        applicationId "com.dubtimes.connect"
-        minSdk 26
-        targetSdk 34
-        versionCode 6
-        versionName "0.6"
-    }
+ namespace 'com.dubtimes.connectviewer'
+ compileSdk 35
+ defaultConfig { applicationId 'com.dubtimes.connectviewer'; minSdk 26; targetSdk 35; versionCode 1001; versionName '1.0.1' }
+ signingConfigs { release {
+   storeFile rootProject.file('Firma/connect-key.jks')
+   storePassword (System.getenv('DUBTIMES_KEYSTORE_PASSWORD') ?: '')
+   keyAlias (System.getenv('DUBTIMES_KEY_ALIAS') ?: '')
+   keyPassword (System.getenv('DUBTIMES_KEY_PASSWORD') ?: '')
+ } }
+ buildTypes {
+   release {
+     signingConfig (System.getenv('DUBTIMES_SIGN_RELEASE') == 'true' ? signingConfigs.release : null)
+     minifyEnabled false
+     debuggable false
+   }
+ }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
 }
-
