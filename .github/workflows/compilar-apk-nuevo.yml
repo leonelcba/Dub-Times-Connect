@@ -1,0 +1,83 @@
+name: Compilar APK Android 1.0.1 NUEVO
+run-name: Nuevo build Android 1.0.1 - ${{ github.sha }}
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/compilar-apk-nuevo.yml'
+permissions:
+  contents: read
+jobs:
+  apk:
+    name: Compilar y publicar APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Obtener proyecto actualizado
+        uses: actions/checkout@v4
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Instalar Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Instalar Android 35
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Instalar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Comprobar que no se compile una version antigua
+        shell: bash
+        run: |
+          grep -q "com.dubtimes.connectviewer" app/build.gradle
+          grep -q "versionCode 1001" app/build.gradle
+          test -f app/src/main/java/com/dubtimes/connectviewer/MainActivity.java
+      - name: Compilar APK debug
+        run: gradle :app:assembleDebug --no-daemon --stacktrace
+      - name: Guardar APK debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: DubTimesConnect-1.0.1-APK-debug
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
+      - name: Detectar si esta disponible la firma de actualizacion
+        id: signing
+        env:
+          KEYSTORE: ${{ secrets.DUBTIMES_ANDROID_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.DUBTIMES_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.DUBTIMES_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.DUBTIMES_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE" ] && [ -n "$STORE_PASSWORD" ] && [ -n "$KEY_ALIAS" ] && [ -n "$KEY_PASSWORD" ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'No hay firma privada. El APK debug no necesariamente puede actualizar la app instalada.'
+          fi
+      - name: Restaurar firma de modo seguro
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          KEYSTORE: ${{ secrets.DUBTIMES_ANDROID_KEYSTORE_B64 }}
+        run: |
+          mkdir -p Firma
+          printf '%s' "$KEYSTORE" | base64 --decode > Firma/connect-key.jks
+      - name: Compilar APK release con firma original
+        if: steps.signing.outputs.ready == 'true'
+        env:
+          DUBTIMES_SIGN_RELEASE: 'true'
+          DUBTIMES_KEYSTORE_PASSWORD: ${{ secrets.DUBTIMES_KEYSTORE_PASSWORD }}
+          DUBTIMES_KEY_ALIAS: ${{ secrets.DUBTIMES_KEY_ALIAS }}
+          DUBTIMES_KEY_PASSWORD: ${{ secrets.DUBTIMES_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --no-daemon --stacktrace
+      - name: Guardar APK release
+        if: steps.signing.outputs.ready == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: DubTimesConnect-1.0.1-APK-release-firmado
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30
